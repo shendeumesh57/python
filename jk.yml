@@ -7,13 +7,7 @@
     venv_path: '/tmp/my_repo/venv'
 
   tasks:
-    - name: Ensure Python3 and venv module are installed
-      package:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - python3
-        - python3-venv  # Required to create venv on Debian/Ubuntu
+
 
     - name: Clone Git repository
       git:
