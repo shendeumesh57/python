@@ -1,0 +1,11 @@
+- name: Run Python script with variable from survey
+  hosts: localhost
+  gather_facts: false
+  vars:
+    root_dir: "{{ user_input_name }}"
+  tasks:
+    - name: Run Python script
+      script: test.py
+      args:
+        argv:
+          - "{{ root_dir }}"
