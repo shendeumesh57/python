@@ -6,7 +6,7 @@ import urllib.parse
 import socket
 
 #root_dir = sys.argv[1]
-root_dir = "/home/umesh/httpd"
+root_dir = "/home/umesh/scripts/httpd"
 patterrn = re.compile(r"((http|https|ajp|ws|wss):\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,10}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*))")
 
 rx_blanks=re.compile(r"\W+") # to remove blanks and newlines
