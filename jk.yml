@@ -1,6 +1,10 @@
-- name: Run Python script without any input
+- name: Run Python script with Python 3
   hosts: localhost
   gather_facts: false
+  vars:
+    root_dir: "/home/umesh/httpd"
   tasks:
-    - name: Run the Python script
-      script: test.py
+    - name: Run test.py using Python 3
+      command: python3 test.py {{ root_dir }}
+      args:
+        chdir: "/home/umesh/scripts/test.py"
