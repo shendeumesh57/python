@@ -1,0 +1,43 @@
+---
+- name: Clone Git repo and run Python code in a virtualenv
+  hosts: localhost
+  vars:
+    git_repo_url: 'https://github.com/shendeumesh57/python.git'  # Replace this
+    local_path: '/tmp/my_repo'
+    venv_path: '/tmp/my_repo/venv'
+
+  tasks:
+
+    - name: Run Python code in a virtualenv
+      block:
+        - name: Clone Git repository
+          git:
+           repo: "{{ git_repo_url }}"
+           dest: "{{ local_path }}"
+           force: yes
+
+        - name: Create Python virtual environment
+          command: python3 -m venv {{ venv_path }}
+          args:
+            creates: "{{ venv_path }}/bin/activate"
+
+
+        - name: Run Python script inside virtual environment
+          shell: |
+            source {{ venv_path }}/bin/activate
+            python test.py
+          args:
+            chdir: "{{ local_path }}"
+          register: script_output
+
+        - name: Show only  "URL:PORT:IP"
+          debug:
+            msg: "{{ script_output.stdout_lines | select('search', 'URL:') | join(' | ') }}"
+              #loop: "{{ script_output.stdout_lines | select('search', 'URL:') | list }}"
+
+      always:
+        - name: delete destination directory
+          file:
+            path: "{{local_path}}"
+            state: absent
+          delegate_to: localhost

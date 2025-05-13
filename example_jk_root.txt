@@ -1,0 +1,27 @@
+<Proxy "balancer://mycluster">
+    BalancerMember http://httpbin.org:8080/app1
+    BalancerMember http://example.com:80/app2
+    ProxySet lbmethod=byrequests
+</Proxy>
+
+<VirtualHost *:80>
+    ServerName example.com
+
+    ProxyPreserveHost On
+    ProxyPass "/" "balancer://mycluster/"
+    ProxyPassReverse "/" "balancer://mycluster/"
+
+    # Optional: Enable status dashboard
+    <Location "/balancer-manager">
+        SetHandler balancer-manager
+        Require all granted
+    </Location>
+
+    # Required for balancer-manager
+    <IfModule mod_status.c>
+        <Location "/server-status">
+            SetHandler server-status
+            Require all granted
+        </Location>
+    </IfModule>
+</VirtualHost>
