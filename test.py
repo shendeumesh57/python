@@ -10,7 +10,7 @@ patterrn = re.compile(r"((http|https|ajp|ws|wss):\/\/(www\.)?[-a-zA-Z0-9@:%._\+~
 
 rx_blanks=re.compile(r"\W+") # to remove blanks and newlines
 
-for filename in glob.iglob(root_dir + '**/**',recursive=True):
+for filename in glob.iglob(root_dir + '**/*',recursive=True):
     #print("file: ",filename)
     if os.path.isfile(filename):
         # file exists
