@@ -1,6 +1,6 @@
 <Proxy "balancer://mycluster">
     BalancerMember http://httpbin.org:8080/app1
-    BalancerMember http://example.com:80/app2
+    #BalancerMember http://example.com:80/app2
     ProxySet lbmethod=byrequests
 </Proxy>
 

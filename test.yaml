@@ -1,43 +1,66 @@
 ---
-- name: Clone Git repo and run Python code in a virtualenv
+- name: Ansible Playbook to find URLs in files recursively
   hosts: localhost
+  gather_facts: false
   vars:
-    git_repo_url: 'https://github.com/shendeumesh57/python.git'  # Replace this
-    local_path: '/tmp/my_repo'
-    venv_path: '/tmp/my_repo/venv'
+    root_dir: "/home/umesh/scripts/httpd"
+    url_regex: '((http|https|ajp|ws|wss):\/\/(www\.)?[-a-zA-Z0-9@:%._\\+~#=]{2,256}\.[a-z]{2,10}\b([-a-zA-Z0-9@:%_\\+.~#?&//=]*))'
 
   tasks:
+    - name: Find all files under root_dir
+      ansible.builtin.find:
+        paths: "{{ root_dir }}"
+        recurse: yes
+        file_type: file
+      register: found_files
 
-    - name: Run Python code in a virtualenv
-      block:
-        - name: Clone Git repository
-          git:
-           repo: "{{ git_repo_url }}"
-           dest: "{{ local_path }}"
-           force: yes
+    - name: Search for URL pattern in each file using grep
+      ansible.builtin.shell: |
+        grep -Ev '^\s*#' "{{ item.path }}" | grep -Eo '{{ url_regex }}' || true
+      args:
+        executable: /bin/bash
+      loop: "{{ found_files.files }}"
+      register: url_matches
+      changed_when: false
+      failed_when: false
 
-        - name: Create Python virtual environment
-          command: python3 -m venv {{ venv_path }}
-          args:
-            creates: "{{ venv_path }}/bin/activate"
+    #- name: Display matching URLs with file path
+    #  debug:
+    #    msg: |
+    #      File: {{ item.item.path }}
+    #      Matches:
+    #      {{ item.stdout_lines | default([]) | join('\n') }}
+    #  loop: "{{ url_matches.results }}"
+    #  when: item.stdout_lines is defined and item.stdout_lines | length > 0
 
+    - name: Print only matched URLs (stdout_lines)
+      debug:
+        var: item.stdout_lines
+      loop: "{{ url_matches.results }}"
+      when: item.stdout_lines is defined and item.stdout_lines | length > 0
+      no_log: true
 
-        - name: Run Python script inside virtual environment
-          shell: |
-            source {{ venv_path }}/bin/activate
-            python test.py
-          args:
-            chdir: "{{ local_path }}"
-          register: script_output
+    - name: Prepare base URLs from matches
+      vars:
+        base_urls: "{{ url_matches.results | map(attribute='stdout_lines') | flatten | map('regex_replace', '^(https?|ajp|ws|wss):\\/\\/([^\\/]+)\\/?.*', '\\1://\\2') | list }}"
+      set_fact:
+        clean_base_urls: "{{ base_urls }}"
 
-        - name: Show only  "URL:PORT:IP"
-          debug:
-            msg: "{{ script_output.stdout_lines | select('search', 'URL:') | join(' | ') }}"
-              #loop: "{{ script_output.stdout_lines | select('search', 'URL:') | list }}"
+    - name: Resolve FQDN to IP and print results
+      vars:
+        scheme: "{{ item.split('://')[0] }}"
+        host_port: "{{ item.split('://')[1] }}"
+        fqdn: "{{ host_port.split(':')[0] }}"
+        port: "{{ host_port.split(':')[1] if ':' in host_port else '80' }}"
+      shell: "getent hosts {{ fqdn }} | awk '{print $1}'"
+      register: resolved_ips
+      loop: "{{ clean_base_urls }}"
+      changed_when: false
+      failed_when: false
 
-      always:
-        - name: delete destination directory
-          file:
-            path: "{{local_path}}"
-            state: absent
-          delegate_to: localhost
+    - name: Print URL,  PORT,  IP
+      ansible.builtin.debug:
+        msg: "URL: {{ item.item | urlsplit('hostname') }} PORT: {{ item.item | urlsplit('port') | default('80') }} IP: {{ item.stdout_lines | join('\n') }}"
+      loop: "{{ resolved_ips.results }}"
+      loop_control:
+        label: "{{ item.item }}"
